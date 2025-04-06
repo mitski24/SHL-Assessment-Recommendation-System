@@ -1,0 +1,201 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHL Assessment Recommender</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f8fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            max-width: 1000px;
+            margin-top: 30px;
+        }
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .header {
+            background-color: #003366;
+            color: white;
+            padding: 20px 0;
+            border-radius: 10px 10px 0 0;
+        }
+        .form-control {
+            border-radius: 6px;
+        }
+        .btn-primary {
+            background-color: #003366;
+            border: none;
+        }
+        .btn-primary:hover {
+            background-color: #00264d;
+        }
+        .results-table {
+            width: 100%;
+            margin-top: 20px;
+        }
+        .results-table th {
+            background-color: #e9ecef;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header text-center">
+                <h1>SHL Assessment Recommendation System</h1>
+                <p>Find the perfect assessments for your hiring needs</p>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="queryInput" class="form-label">Natural Language Query</label>
+                            <textarea class="form-control" id="queryInput" rows="5" placeholder="e.g., I need a Java skills assessment that takes less than 45 minutes"></textarea>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="urlInput" class="form-label">Job Description URL (Optional)</label>
+                            <input type="text" class="form-control" id="urlInput" placeholder="https://example.com/job-description">
+                        </div>
+                        <div class="mb-3">
+                            <label for="jobDescriptionInput" class="form-label">Or Paste Job Description</label>
+                            <textarea class="form-control" id="jobDescriptionInput" rows="3" placeholder="Paste job description text here"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mt-3">
+                    <button class="btn btn-primary px-4 py-2" id="recommendButton">Get Recommendations</button>
+                </div>
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Analyzing your requirements...</p>
+                </div>
+                <div id="resultsSection" style="display: none;">
+                    <h3 class="mt-4 mb-3">Recommended Assessments</h3>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover results-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Assessment Name</th>
+                                    <th>Remote Testing</th>
+                                    <th>Adaptive/IRT</th>
+                                    <th>Duration</th>
+                                    <th>Test Type</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTable">
+                                <!-- Results will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('recommendButton').addEventListener('click', function() {
+            const query = document.getElementById('queryInput').value;
+            const url = document.getElementById('urlInput').value;
+            const jobDescription = document.getElementById('jobDescriptionInput').value;
+            
+            // Validate input
+            if (!query && !url && !jobDescription) {
+                alert('Please enter a query, URL, or job description');
+                return;
+            }
+            
+            // Show loading indicator
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            
+            // Prepare request parameters
+            let requestUrl = '/api/recommend?';
+            if (query) requestUrl += `query=${encodeURIComponent(query)}`;
+            if (url) requestUrl += `&url=${encodeURIComponent(url)}`;
+            if (jobDescription) requestUrl += `&job_description=${encodeURIComponent(jobDescription)}`;
+            
+            // Make API request
+            fetch(requestUrl)
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading indicator
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    
+                    // Show results section
+                    document.getElementById('resultsSection').style.display = 'block';
+                    
+                    // Clear previous results
+                    const resultsTable = document.getElementById('resultsTable');
+                    resultsTable.innerHTML = '';
+                    
+                    // Add new results
+                    data.recommendations.forEach(recommendation => {
+                        const row = document.createElement('tr');
+                        
+                        // Assessment Name with URL
+                        const nameCell = document.createElement('td');
+                        const nameLink = document.createElement('a');
+                        nameLink.href = recommendation.url;
+                        nameLink.target = '_blank';
+                        nameLink.textContent = recommendation.name;
+                        nameCell.appendChild(nameLink);
+                        row.appendChild(nameCell);
+                        
+                        // Remote Testing
+                        const remoteCell = document.createElement('td');
+                        remoteCell.textContent = recommendation.remote_testing;
+                        row.appendChild(remoteCell);
+                        
+                        // Adaptive/IRT
+                        const adaptiveCell = document.createElement('td');
+                        adaptiveCell.textContent = recommendation.adaptive_irt;
+                        row.appendChild(adaptiveCell);
+                        
+                        // Duration
+                        const durationCell = document.createElement('td');
+                        durationCell.textContent = recommendation.duration;
+                        row.appendChild(durationCell);
+                        
+                        // Test Type
+                        const typeCell = document.createElement('td');
+                        typeCell.textContent = recommendation.test_type;
+                        row.appendChild(typeCell);
+                        
+                        resultsTable.appendChild(row);
+                    });
+                    
+                    if (data.recommendations.length === 0) {
+                        const row = document.createElement('tr');
+                        const cell = document.createElement('td');
+                        cell.colSpan = 5;
+                        cell.textContent = 'No matching assessments found. Please try different search criteria.';
+                        cell.className = 'text-center p-3';
+                        row.appendChild(cell);
+                        resultsTable.appendChild(row);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    alert('An error occurred while fetching recommendations. Please try again.');
+                });
+        });
+    </script>
+</body>
+</html>
