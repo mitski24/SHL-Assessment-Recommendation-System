@@ -1,6 +1,6 @@
 # app.py - Main application file
 
-from flask import Flask, request, jsonify, render_template
+import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import re
